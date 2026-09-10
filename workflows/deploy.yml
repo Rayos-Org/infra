@@ -1,0 +1,52 @@
+name: Deploy (Reusable)
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      service:
+        required: true
+        type: string
+    secrets:
+      RENDER_DEPLOY_HOOK:
+        required: false
+      VERCEL_TOKEN:
+        required: false
+      VERCEL_ORG_ID:
+        required: false
+      VERCEL_PROJECT_ID:
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check mainnet gate
+        if: inputs.environment == 'mainnet'
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'audit-passed') }}" != "true" && "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "ERROR: Mainnet deployment requires the 'audit-passed' label on the PR."
+            exit 1
+          fi
+
+      - name: Deploy relay-backend to Render
+        if: inputs.service == 'relay-backend'
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "RENDER_DEPLOY_HOOK is not set."
+            exit 1
+          fi
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Deploy to Vercel
+        if: inputs.service == 'web-dashboard' || inputs.service == 'demo-app'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ (inputs.environment == 'mainnet' || inputs.environment == 'testnet-staging') && '--prod' || '' }}
+
