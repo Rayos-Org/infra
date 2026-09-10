@@ -1,0 +1,11 @@
+extends: default
+
+rules:
+  document-start: disable
+  truthy:
+    check-keys: false
+  line-length: disable
+  trailing-spaces: disable
+  empty-lines: disable
+  new-line-at-end-of-file: disable
+  new-lines: disable
