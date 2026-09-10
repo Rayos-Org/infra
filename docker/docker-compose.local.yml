@@ -1,0 +1,47 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rayos_postgres_local
+    env_file:
+      - ../environments/testnet-dev.env.example
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: relay_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - relay_pg_data:/var/lib/postgresql/data
+    networks:
+      - rayos_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d relay_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rayos_redis_local
+    ports:
+      - '6379:6379'
+    volumes:
+      - relay_redis_data:/data
+    networks:
+      - rayos_local
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  relay_pg_data:
+  relay_redis_data:
+
+networks:
+  rayos_local:
+    driver: bridge
+
+
