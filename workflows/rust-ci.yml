@@ -1,0 +1,38 @@
+name: Rust CI (Reusable)
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ inputs.working-directory }}
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --all
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - run: cargo audit
+      - name: WASM size check
+        run: |
+          cargo build --target wasm32v1-none --release
+          for f in target/wasm32v1-none/release/*.wasm; do
+            size=$(wc -c < "$f")
+            echo "$f: ${size} bytes"
+            [ "$size" -lt 102400 ] || (echo "FAIL: $f exceeds 100 KB limit" && exit 1)
+          done
+
