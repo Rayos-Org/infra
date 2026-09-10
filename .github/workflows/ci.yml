@@ -1,0 +1,23 @@
+name: Infra CI
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate YAML files
+        run: |
+          pip install yamllint
+          yamllint workflows/ docker/
+      - name: Validate shell scripts
+        run: |
+          sudo apt-get install -y shellcheck
+          # Only run if scripts exist
+          if [ -d "scripts" ]; then
+            shellcheck scripts/*.sh
+          fi
+      - name: Test docker-compose syntax
+        run: |
+          docker compose -f docker/docker-compose.local.yml config --quiet
+          docker compose -f docker/docker-compose.ci.yml config --quiet
